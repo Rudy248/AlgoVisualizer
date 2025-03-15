@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -18,6 +18,15 @@ const algorithms = {
     "QuickSort is a sorting algorithm based on the Divide and Conquer that picks an element as a pivot and partitions the given array around the picked pivot by placing the pivot in its correct position in the sorted array. Time Complexity: O(n log n) average and best case, O(n^2) worst case.",
 };
 
+type AlgorithmType =
+  | "Bubble Sort"
+  | "Selection Sort"
+  | "Insertion Sort"
+  | "Merge Sort"
+  | "Quick Sort";
+
+type SortFunction = (array: number[]) => void;
+
 const SortingVisualizer = () => {
   const [array, setArray] = useState<number[]>([]);
   const [customValues, setCustomValues] = useState("");
@@ -25,24 +34,23 @@ const SortingVisualizer = () => {
   const [sorting, setSorting] = useState(false);
   const [activeIndices, setActiveIndices] = useState<number[]>([]);
   const [sortedIndices, setSortedIndices] = useState<number[]>([]);
-  const [selectedAlgorithm, setSelectedAlgorithm] = useState<string | null>(
-    null
-  );
+  const [selectedAlgorithm, setSelectedAlgorithm] =
+    useState<AlgorithmType | null>(null);
+
+  const resetArray = useCallback(() => {
+    if (sorting) return;
+    const newArray = Array.from(
+      { length: 20 },
+      () => Math.floor(Math.random() * 100) + 1
+    );
+    setArray(newArray);
+    setSortedIndices([]);
+    setActiveIndices([]);
+  }, [sorting]);
 
   useEffect(() => {
     resetArray();
   }, []);
-
-  const resetArray = () => {
-    if (sorting) return;
-    const newArr = Array.from(
-      { length: 20 },
-      () => Math.floor(Math.random() * 100) + 1
-    );
-    setArray(newArr);
-    setSortedIndices([]);
-    setActiveIndices([]);
-  };
 
   const handleCustomValues = () => {
     const values = customValues
@@ -59,15 +67,18 @@ const SortingVisualizer = () => {
   const sleep = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
-  const handleSort = async (sortFunction: Function, algorithmName: string) => {
-    setSelectedAlgorithm(algorithmName);
-    await sortFunction();
+  const handleSort = async (
+    sortFunction: SortFunction,
+    algorithmName: string
+  ) => {
+    setSelectedAlgorithm(algorithmName as AlgorithmType);
+    await sortFunction(array);
   };
 
-  const bubbleSort = async () => {
+  const bubbleSort = async (array: number[]) => {
     if (sorting) return;
     setSorting(true);
-    let arr = [...array];
+    const arr = [...array];
     for (let i = 0; i < arr.length - 1; i++) {
       for (let j = 0; j < arr.length - i - 1; j++) {
         setActiveIndices([j, j + 1]);
@@ -83,10 +94,10 @@ const SortingVisualizer = () => {
     setSorting(false);
   };
 
-  const selectionSort = async () => {
+  const selectionSort = async (array: number[]) => {
     if (sorting) return;
     setSorting(true);
-    let arr = [...array];
+    const arr = [...array];
     for (let i = 0; i < arr.length - 1; i++) {
       let minIndex = i;
       for (let j = i + 1; j < arr.length; j++) {
@@ -104,12 +115,12 @@ const SortingVisualizer = () => {
     setSorting(false);
   };
 
-  const insertionSort = async () => {
+  const insertionSort = async (array: number[]) => {
     if (sorting) return;
     setSorting(true);
-    let arr = [...array];
+    const arr = [...array];
     for (let i = 1; i < arr.length; i++) {
-      let key = arr[i];
+      const key = arr[i];
       let j = i - 1;
       setActiveIndices([i]);
       while (j >= 0 && arr[j] > key) {
@@ -126,71 +137,71 @@ const SortingVisualizer = () => {
     setSorting(false);
   };
 
-  const mergeSort = async (
-    arr = [...array],
-    left = 0,
-    right = arr.length - 1
-  ) => {
-    if (left >= right) return;
-    const mid = Math.floor((left + right) / 2);
-    await mergeSort(arr, left, mid);
-    await mergeSort(arr, mid + 1, right);
-    await merge(arr, left, mid, right);
-  };
-
-  const merge = async (
-    arr: number[],
-    left: number,
-    mid: number,
-    right: number
-  ) => {
-    let temp = [];
-    let i = left,
-      j = mid + 1;
-    while (i <= mid && j <= right) {
-      setActiveIndices([i, j]);
-      if (arr[i] < arr[j]) {
-        temp.push(arr[i++]);
-      } else {
-        temp.push(arr[j++]);
-      }
-      await sleep(speed);
-    }
-    while (i <= mid) temp.push(arr[i++]);
-    while (j <= right) temp.push(arr[j++]);
-    for (let k = 0; k < temp.length; k++) arr[left + k] = temp[k];
-    setArray([...arr]);
-  };
-
-  const quickSort = async (
-    arr = [...array],
-    low = 0,
-    high = arr.length - 1
-  ) => {
-    if (low < high) {
-      let pivotIndex = await partition(arr, low, high);
-      await quickSort(arr, low, pivotIndex - 1);
-      await quickSort(arr, pivotIndex + 1, high);
-    }
-    setSortedIndices([...Array(arr.length).keys()]);
+  const mergeSort = async (array: number[]) => {
+    if (sorting) return;
+    setSorting(true);
+    const sorted = await mergeSortHelper(array);
+    setArray(sorted);
+    setSortedIndices([...Array(sorted.length).keys()]);
     setSorting(false);
   };
 
-  const partition = async (arr: number[], low: number, high: number) => {
-    let pivot = arr[high];
-    let i = low - 1;
-    for (let j = low; j < high; j++) {
-      setActiveIndices([j, high]);
-      if (arr[j] < pivot) {
-        i++;
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-        setArray([...arr]);
-        await sleep(speed);
+  const mergeSortHelper = async (array: number[]): Promise<number[]> => {
+    if (array.length <= 1) return array;
+    const mid = Math.floor(array.length / 2);
+    const left = await mergeSortHelper(array.slice(0, mid));
+    const right = await mergeSortHelper(array.slice(mid));
+    return await merge(left, right);
+  };
+
+  const merge = async (left: number[], right: number[]): Promise<number[]> => {
+    const result: number[] = [];
+    let i = 0,
+      j = 0;
+
+    while (i < left.length && j < right.length) {
+      setActiveIndices([i, j]);
+      if (left[i] <= right[j]) {
+        result.push(left[i++]);
+      } else {
+        result.push(right[j++]);
       }
+      await sleep(speed);
     }
-    [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
-    setArray([...arr]);
-    return i + 1;
+    while (i < left.length) result.push(left[i++]);
+    while (j < right.length) result.push(right[j++]);
+    setArray([...result]);
+    return result;
+  };
+
+  const quickSort = async (array: number[]) => {
+    if (sorting) return;
+    setSorting(true);
+    const sorted = await quickSortHelper(array);
+    setArray(sorted);
+    setSortedIndices([...Array(sorted.length).keys()]);
+    setSorting(false);
+  };
+
+  const quickSortHelper = async (array: number[]): Promise<number[]> => {
+    if (array.length <= 1) return array;
+    const pivotIndex = Math.floor(array.length / 2);
+    const pivot = array[pivotIndex];
+    const left: number[] = [];
+    const right: number[] = [];
+    for (let i = 0; i < array.length; i++) {
+      setActiveIndices([i, pivotIndex]);
+      if (i === pivotIndex) continue;
+      if (array[i] < pivot) {
+        left.push(array[i]);
+      } else {
+        right.push(array[i]);
+      }
+      await sleep(speed);
+    }
+    const sortedLeft = await quickSortHelper(left);
+    const sortedRight = await quickSortHelper(right);
+    return [...sortedLeft, pivot, ...sortedRight];
   };
 
   return (
@@ -230,13 +241,13 @@ const SortingVisualizer = () => {
           Insertion Sort
         </Button>
         <Button
-          onClick={() => handleSort(() => mergeSort(), "Merge Sort")}
+          onClick={() => handleSort(mergeSort, "Merge Sort")}
           disabled={sorting}
         >
           Merge Sort
         </Button>
         <Button
-          onClick={() => handleSort(() => quickSort(), "Quick Sort")}
+          onClick={() => handleSort(quickSort, "Quick Sort")}
           disabled={sorting}
         >
           Quick Sort
@@ -276,7 +287,7 @@ const SortingVisualizer = () => {
       {selectedAlgorithm && (
         <div className="mt-4 p-4 border rounded shadow-lg bg-gray-100">
           <h3 className="text-lg font-semibold">{selectedAlgorithm}</h3>
-          <p>{algorithms[selectedAlgorithm]}</p>
+          <p>{algorithms[selectedAlgorithm as keyof typeof algorithms]}</p>
         </div>
       )}
     </div>
